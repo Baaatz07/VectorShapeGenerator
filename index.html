@@ -1,0 +1,555 @@
+<!--<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Canvas Shape Preview</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #222;
+    }
+    #canvas {
+      background: white;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      justify-content: center;
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+    input, select {
+      padding: 4px 6px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    #save {
+      padding: 8px 14px;
+      font-size: 0.95rem;
+      background: #0077cc;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #save:hover {
+      background: #005fa3;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Canvas Shape Preview</h1>
+  <canvas id="canvas" width="256" height="256"></canvas>
+
+  <div class="controls">
+    <label>Skalierung:
+      <input id="scale" type="number" step="1" min="1" value="1">
+    </label>
+    <label>Bézier Intensity:
+      <input id="bézierIntensity" type="number" step="0.05" min="0" max="1" value="1">
+    </label>
+    <label>Bézier Offset:
+      <input id="bézierOffset" type="number" step="0.05" min="0" max="1" value="1">
+    </label>
+    <label>Point Type:
+      <select id="pointType">
+        <option value="Rect">Rect</option>
+        <option value="Flat">Flat</option>
+        <option value="Arc">Arc</option>
+        <option value="Bézier">Bézier</option>
+      </select>
+    </label>
+  </div>
+
+  <button id="save">Save PNG</button>
+  <span id="currentRes"></span>
+
+</body>
+</html>
+-->
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Shape Editor</title>
+<style>
+  :root{--sidebar:300px}
+  html,body{height:100%;margin:0;font-family:system-ui,Arial,sans-serif;background:#f5f6f8;color:#222}
+  body, .sidebar, label, input, select, button, canvas {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+  }
+  .wrap{
+    display:flex;
+    height:100vh;
+    overflow:hidden;
+  }
+  canvas{
+    background:#fff;
+    border:1px solid rgb(0, 0, 0);
+    display:block;
+    margin: 20px;
+    box-sizing:border-box;
+    border-radius: 15px;
+    box-shadow: 0 0 10px rgb(0, 0, 0, 0.5);
+    align-self: center;
+    transition: width 0.25s cubic-bezier(.4,1.6,.4,1), height 0.25s cubic-bezier(.4,1.6,.4,1);
+  }
+  .sidebar{
+    width:var(--sidebar);
+    padding:18px;
+    box-sizing:border-box;
+    background:#fff;
+    box-shadow: 0 0 10px rgb(0, 0, 0, 0.5);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin:20px 20px 20px 0;
+    margin-left: auto;
+    border-radius: 15px;
+    border:1px solid rgb(0, 0, 0);
+    max-height: calc(100vh - 40px); /* Platz für Margin */
+    overflow-y: auto;               /* Scrollbar bei Bedarf */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .sidebar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  h2{
+    margin:0;
+    align-self: center; 
+    font-size:1.5rem;
+    font-weight: 800;
+  }
+
+  label{font-size:0.9rem;display:flex;flex-direction:column;gap:6px}
+  input,select{padding:6px;border:1px solid #c9ccd1;border-radius:6px;font-size:0.9rem}
+  input[type=range]{padding:0}
+  .dyn{display:none}
+  #save{margin-top:auto;padding:10px 12px;border-radius:8px;border:0;background:#0b76d1;color:#fff;cursor:pointer}
+  #save:hover{background:#0a5ea6}
+  #currentRes{font-size:0.85rem;color:#556}
+  .previewMini{display:flex;gap:6px;align-items:center;font-size:0.85rem;color:#556}
+
+#save {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #0b76d1;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(11,118,209,0.08);
+  transition: all 0.13s cubic-bezier(.4,1.6,.4,1);
+  outline: none;
+}
+#save:hover {
+  background: #0a5ea6;
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 18px rgba(11,118,209,0.13);
+  outline: 5px solid rgba(11,118,209,0.2);
+  border-radius: 20px;
+}
+#save:active:hover {
+  background: #09508a;
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(11,118,209,0.08);
+  border-radius: 20px;
+  outline: 5px solid rgba(0, 88, 165, 0.24);
+}
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="canvas"></canvas>
+  <aside class="sidebar">
+    <h2>Settings</h2>
+    <label>Auflösung
+      <input id="scale" type="number" min="1" max="11" step="1" value="5">
+    </label>
+    <div id="dynControls" class="dyn">
+      <label>Point Type
+        <select id="pointType">
+          <option>Flat</option>
+          <option>Arc</option>
+          <option>Bézier</option>
+        </select>
+      </label>
+      <div id="bezierControls" style="display:none">
+        <label>Bézier Intensity
+          <input id="bézierIntensity" type="range" min="0" max="1" step="0.01" value="1">
+        </label>
+        <label>Bézier Offset
+          <input id="bézierOffset" type="range" min="0" max="1" step="0.01" value="0.5">
+        </label>
+      </div>
+      <div id="flatControls" style="display:none">
+        <label>Flat Offset
+          <input id="flatOffset" type="range" min="-1" max="1" step="0.01" value="0">
+        </label>
+      </div>
+      <div id="arcControls" style="display:none">
+        <label>Arc Offset
+          <input id="arcOffset" type="range" min="-3" max="1" step="0.01" value="0">
+        </label>
+        <label>Arc Sweep
+          <input id="arcSweep" type="checkbox">
+        </label>
+      </div>
+    </div>
+    <label>Stroke Width
+      <input id="strokeWidth" type="range" min="1" max="190" value="50">
+    </label>
+    <div class="previewMini"><span id="currentRes"></span></div>
+    <button id="save">Save PNG</button>
+  </aside>
+</div>
+
+<script>
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const controls={
+  scale:document.getElementById('scale'),
+  pointType:document.getElementById('pointType'),
+  bezierIntensity:document.getElementById('bézierIntensity'),
+  bezierOffset:document.getElementById('bézierOffset'),
+  bezierControls:document.getElementById('bezierControls'),
+  flatOffset:document.getElementById('flatOffset'),
+  flatControls:document.getElementById('flatControls'),
+  strokeWidth:document.getElementById('strokeWidth'),
+  currentRes:document.getElementById('currentRes'),
+  save:document.getElementById('save'),
+  dynControls:document.getElementById('dynControls'),
+  arcOffset:document.getElementById('arcOffset'),
+  arcSweep:document.getElementById('arcSweep'),
+  arcControls:document.getElementById('arcControls')
+};
+const SIDEBAR=300;
+const DPR=2;
+const resolution=[8,16,32,64,128,256,512,1024,2048,4096,8192,16384];
+const edgePointsEnd=[[0,95],[95,0],[0,-95],[-95,0]];
+let pathData="";
+const state={
+  currentResolution:512,
+  selectedIndex:null,
+  cssSize:512,
+  pointInfos:["Arc","Arc","Arc","Arc"],
+  bezierIntensity:[1,1,1,1],
+  bezierOffset:[0.5,0.5,0.5,0.5],
+  flatOffset:[0,0,0,0],
+  strokeWidth:50,
+  arcOffset:[-3,-3,-3,-3],
+  arcSweep:[true,true,true,true]
+};
+
+let resizeTimeout = null;
+let lastSize = 0;
+
+function resizeCanvas(){
+  const sidebarWidth = SIDEBAR;
+  const availableWidth = window.innerWidth - sidebarWidth;
+  const availableHeight = window.innerHeight;
+  const size = Math.min(availableWidth, availableHeight);
+
+  // Sofort sichtbare Größe animieren
+  canvas.style.width = (size - 40) + 'px';
+  canvas.style.height = (size - 40) + 'px';
+
+  // Verzögert tatsächliche Canvas-Größe setzen (debounce)
+  if (resizeTimeout) clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    canvas.width = Math.round(size * DPR);
+    canvas.height = Math.round(size * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    state.cssSize = size;
+    renderCanvas();
+    lastSize = size;
+  }, 180); // 180ms nach letztem Resize
+}
+
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+
+function updateResolution(){
+  const i=Math.min(Math.max(parseInt(controls.scale.value)||0,0),resolution.length-1);
+  state.currentResolution=resolution[i];
+  controls.currentRes.textContent=`Aktuelle Auflösung: ${state.currentResolution}×${state.currentResolution}`;
+  renderCanvas();
+}
+controls.scale.addEventListener('input',updateResolution);
+
+function MoveTo(x,y){pathData+=` M${x} ${-y}`;}
+function AddLineXY(x,y){pathData+=` L${x} ${-y}`;}
+function ClosePath(){pathData+=` Z`;}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+function AddLine(i,offset=0){
+  let x,y;
+  if(i===0||i===2){
+    AddLineXY(edgePointsEnd[(i+3)%4][0],lerp(0,edgePointsEnd[i][1],offset));
+    x=lerp(0,edgePointsEnd[(i+3)%4][0],offset);
+    y=edgePointsEnd[i][1];
+  }else{
+    AddLineXY(lerp(0,edgePointsEnd[i][0],offset),edgePointsEnd[(i+3)%4][1]);
+    x=edgePointsEnd[i][0];
+    y=lerp(0,edgePointsEnd[(i+3)%4][1],offset);
+  }
+  pathData+=` L${x} ${-y}`;
+  AddLineXY(edgePointsEnd[i][0],edgePointsEnd[i][1]);
+}
+
+function AddFlat(i,offset=0){
+  AddLine(i,offset);
+}
+
+function AddBézier(i,intensity=1,offset=0){
+  //intensity=Math.min(Math.max(intensity,0),1);
+  if(i===0||i===2){
+    AddLineXY(edgePointsEnd[(i+3)%4][0],lerp(0,edgePointsEnd[i][1],offset));
+    let cpx=lerp(0,edgePointsEnd[(i+3)%4][0],intensity);
+    let cpy=lerp(0,-edgePointsEnd[i][1],intensity);
+    let x=lerp(0,edgePointsEnd[(i+3)%4][0],offset);
+    let y=-edgePointsEnd[i][1];
+    pathData+=` Q${cpx} ${cpy}, ${x} ${y}`;
+  }else{
+    AddLineXY(lerp(0,edgePointsEnd[i][0],offset),edgePointsEnd[(i+3)%4][1]);
+    let cpx=lerp(0,edgePointsEnd[i][0],intensity);
+    let cpy=lerp(0,-edgePointsEnd[(i+3)%4][1],intensity);
+    let x=edgePointsEnd[i][0];
+    let y=-lerp(0,edgePointsEnd[(i+3)%4][1],offset);
+    pathData+=` Q${cpx} ${cpy}, ${x} ${y}`;
+  }
+  AddLineXY(edgePointsEnd[i][0],edgePointsEnd[i][1]);
+}
+
+function AddArc(i, offset = 0, sweep = false) {
+  // Berechne Start- und Endpunkt wie bei Flat
+  let startX, startY, endX, endY, arcX, arcY, r;
+  // Offset von -1..1 auf 0..1 mappen
+  const t = lerp(0, 1, (offset + 1) / 2);
+
+  if (i === 0 || i === 2) {
+    // Vertikale Seiten
+    startX = edgePointsEnd[(i + 3) % 4][0];
+    startY = lerp(0, edgePointsEnd[i][1], t);
+    arcX = lerp(0, edgePointsEnd[(i + 3) % 4][0], t);
+    arcY = edgePointsEnd[i][1];
+    endX = edgePointsEnd[i][0];
+    endY = edgePointsEnd[i][1];
+
+    // Radius ist Abstand zwischen Startpunkt und Arc-Mittelpunkt
+    r = Math.abs(startY - arcY);
+
+    AddLineXY(startX, startY);
+    pathData += ` A${r} ${r},0 0 ${sweep ? 1 : 0},${arcX} ${-arcY}`;
+    AddLineXY(endX, endY);
+  } else {
+    // Horizontale Seiten
+    startX = lerp(0, edgePointsEnd[i][0], t);
+    startY = edgePointsEnd[(i + 3) % 4][1];
+    arcX = edgePointsEnd[i][0];
+    arcY = lerp(0, edgePointsEnd[(i + 3) % 4][1], t);
+    endX = edgePointsEnd[i][0];
+    endY = edgePointsEnd[i][1];
+
+    r = Math.abs(startX - arcX);
+
+    AddLineXY(startX, startY);
+    pathData += ` A${r} ${r},0 0 ${sweep ? 1 : 0},${arcX} ${-arcY}`;
+    AddLineXY(endX, endY);
+  }
+}
+
+function createPath(){
+  pathData="";
+  MoveTo(edgePointsEnd[3][0],edgePointsEnd[3][1]);
+  for(let i=0;i<4;i++){
+    const t=state.pointInfos[i];
+    if(t==="Bézier") AddBézier(i,state.bezierIntensity[i],state.bezierOffset[i]);
+    else if(t==="Flat") AddFlat(i, lerp(0,1,(state.flatOffset[i] + 1) / 2));
+    else if(t==="Arc") AddArc(i, lerp(0,1,(state.arcOffset[i] + 1) / 2), state.arcSweep[i]);
+  }
+  ClosePath();
+  updateResolution();
+}
+
+function renderCanvas(){
+  const svgSize=state.currentResolution*2;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${svgSize}" height="${svgSize}" viewBox="-100 -100 200 200"><defs><mask id="cutout"><rect x="-100" y="-100" width="200" height="200" fill="black"/><path d="${pathData}" fill="white"/><path d="${pathData}" fill="black" stroke="white" stroke-width="${state.strokeWidth}"/></mask></defs><path d="${pathData}" fill="black" mask="url(#cutout)"/></svg>`;
+  const blob=new Blob([svg],{type:"image/svg+xml"});
+  const url=URL.createObjectURL(blob);
+  const img=new Image();
+  img.onload=()=>{
+    ctx.clearRect(0,0,state.cssSize,state.cssSize);
+    ctx.drawImage(img,0,0,state.cssSize,state.cssSize);
+    highlightSelection();
+    URL.revokeObjectURL(url);
+  };
+  img.src=url;
+}
+
+function highlightSelection(){
+  if(state.selectedIndex===null) return;
+  const half=state.cssSize/2;
+  ctx.fillStyle="rgba(255,0,0,0.18)";
+
+  ctx.strokeStyle="rgba(255,0,0,0.7)";
+  ctx.lineWidth=4;
+  ctx.setLineDash([8, 6]);
+  if(state.selectedIndex===0) { ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,half,half); ctx.fillRect(ctx.lineWidth,ctx.lineWidth,half - ctx.lineWidth,half - ctx.lineWidth); }
+  if(state.selectedIndex===1) { ctx.strokeRect(half - ctx.lineWidth/2,ctx.lineWidth/2,half,half); ctx.fillRect(half ,ctx.lineWidth,half - ctx.lineWidth,half - ctx.lineWidth); }
+  if(state.selectedIndex===2) { ctx.strokeRect(half - ctx.lineWidth/2,half - ctx.lineWidth/2,half,half); ctx.fillRect(half,half,half - ctx.lineWidth,half - ctx.lineWidth); }
+  if(state.selectedIndex===3) { ctx.strokeRect(ctx.lineWidth/2,half - ctx.lineWidth/2,half,half); ctx.fillRect(ctx.lineWidth,half,half - ctx.lineWidth,half - ctx.lineWidth); }
+}
+
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const midX=rect.left+rect.width/2;
+  const midY=rect.top+rect.height/2;
+  const cx=e.clientX, cy=e.clientY;
+  let idx=null;
+  if(cx>=midX && cy<midY) idx=1;
+  else if(cx>=midX && cy>=midY) idx=2;
+  else if(cx<midX && cy>=midY) idx=3;
+  else idx=0;
+  if(state.selectedIndex===idx){
+    state.selectedIndex=null;
+    controls.dynControls.style.display='none';
+  }else{
+    state.selectedIndex=idx;
+    controls.dynControls.style.display='block';
+    controls.pointType.value=state.pointInfos[idx];
+    controls.bezierIntensity.value=state.bezierIntensity[idx];
+    controls.bezierOffset.value=state.bezierOffset[idx];
+    controls.flatOffset.value=state.flatOffset[idx];
+    controls.arcOffset.value=state.arcOffset[idx];
+    controls.arcSweep.checked=state.arcSweep[idx];
+    toggleControls();
+  }
+  createPath();
+});
+
+controls.pointType.addEventListener('change',()=>{
+  if(state.selectedIndex===null) return;
+  state.pointInfos[state.selectedIndex]=controls.pointType.value;
+  toggleControls();
+  createPath();
+});
+controls.bezierIntensity.addEventListener('input',()=>{
+  if(state.selectedIndex===null) return;
+  state.bezierIntensity[state.selectedIndex]=parseFloat(controls.bezierIntensity.value);
+  createPath();
+});
+controls.bezierOffset.addEventListener('input',()=>{
+  if(state.selectedIndex===null) return;
+  state.bezierOffset[state.selectedIndex]=parseFloat(controls.bezierOffset.value);
+  createPath();
+});
+controls.flatOffset.addEventListener('input',()=>{
+  if(state.selectedIndex===null) return;
+  state.flatOffset[state.selectedIndex]=parseFloat(controls.flatOffset.value);
+  createPath();
+});
+controls.arcOffset.addEventListener('input',()=>{
+  if(state.selectedIndex===null) return;
+  state.arcOffset[state.selectedIndex]=parseFloat(controls.arcOffset.value);
+  createPath();
+});
+controls.arcSweep.addEventListener('change',()=>{
+  if(state.selectedIndex===null) return;
+  state.arcSweep[state.selectedIndex]=controls.arcSweep.checked;
+  createPath();
+});
+controls.strokeWidth.addEventListener('input',()=>{
+  state.strokeWidth=parseInt(controls.strokeWidth.value);
+  createPath();
+});
+
+function toggleControls(){
+  if(state.selectedIndex===null){
+    controls.bezierControls.style.display='none';
+    controls.flatControls.style.display='none';
+    controls.arcControls.style.display='none';
+    return;
+  }
+  const t=state.pointInfos[state.selectedIndex];
+  controls.bezierControls.style.display=(t==="Bézier")?'block':'none';
+  controls.flatControls.style.display=(t==="Flat")?'block':'none';
+  controls.arcControls.style.display=(t==="Arc")?'block':'none';
+}
+
+controls.save.addEventListener('click',()=>{
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${state.currentResolution}" height="${state.currentResolution}" viewBox="-100 -100 200 200"><defs><mask id="cutout"><rect x="-100" y="-100" width="200" height="200" fill="black"/><path d="${pathData}" fill="white"/><path d="${pathData}" fill="black" stroke="white" stroke-width="${state.strokeWidth}"/></mask></defs><path d="${pathData}" fill="black" mask="url(#cutout)"/></svg>`;
+  const blob=new Blob([svg],{type:"image/svg+xml"});
+  const url=URL.createObjectURL(blob);
+  const img=new Image();
+  img.onload=()=>{
+    const ex=document.createElement('canvas');
+    ex.width=state.currentResolution;
+    ex.height=state.currentResolution;
+    ex.getContext('2d').drawImage(img,0,0,state.currentResolution,state.currentResolution);
+    const link=document.createElement('a');
+    link.href=ex.toDataURL('image/png');
+    link.download=`export_${state.currentResolution}.png`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src=url;
+});
+
+controls.save.addEventListener('click', function(e) {
+  const btn = e.currentTarget;
+  const ripple = document.createElement('span');
+  ripple.style.position = 'absolute';
+  ripple.style.borderRadius = '50%';
+  ripple.style.background = 'rgba(255,255,255,0.5)';
+  ripple.style.pointerEvents = 'none';
+  ripple.style.width = ripple.style.height = '60px';
+  ripple.style.left = (e.offsetX - 30) + 'px';
+  ripple.style.top = (e.offsetY - 30) + 'px';
+  ripple.style.transform = 'scale(0)';
+  ripple.style.opacity = '1';
+  ripple.style.transition = 'transform 0.4s, opacity 0.5s';
+  btn.style.position = 'relative';
+  btn.appendChild(ripple);
+  setTimeout(() => {
+    ripple.style.transform = 'scale(2.5)';
+    ripple.style.opacity = '0';
+  }, 10);
+  setTimeout(() => btn.removeChild(ripple), 500);
+});
+
+createPath();
+</script>
+</body>
+</html>
